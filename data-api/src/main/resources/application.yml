@@ -1,0 +1,15 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: data-api
+
+app:
+  internal-token: ${INTERNAL_TOKEN:change-this-internal-token}
+
+logging:
+  level:
+    root: INFO
+    com.example.dataapi: INFO
+  # Never log request/response bodies or the X-Internal-Token header value.

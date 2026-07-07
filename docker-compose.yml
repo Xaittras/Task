@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mini-test-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-appdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  data-api:
+    build:
+      context: ./data-api
+    container_name: mini-test-data-api
+    restart: unless-stopped
+    environment:
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-change-this-internal-token}
+    ports:
+      - "8081:8081"
+    networks:
+      - backend
+
+  auth-api:
+    build:
+      context: ./auth-api
+    container_name: mini-test-auth-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      data-api:
+        condition: service_started
+    environment:
+      POSTGRES_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-appdb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-change-this-dev-secret-please-32chars}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-change-this-internal-token}
+      DATA_API_URL: http://data-api:8081
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  pgdata:
